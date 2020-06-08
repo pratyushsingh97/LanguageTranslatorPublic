@@ -1,0 +1,214 @@
+<!-- Written by: Pratyush Singh
+This a sample front-end to deploy your webchat.
+Feel free to customize the looks and feel of this html page. 
+This page currently uses the image in the static folder to render a simple background
+-->
+<!DOCTYPE html>
+<head>
+  <base href="/">
+  <title>Language Translation COVID-19 Bot</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta property="og:image" content="conversation.svg" />
+  <meta property="og:title" content="Conversation Chat Simple" />
+  <meta property="og:description" content="Sample application that shows how to use the Watson Assistant API to identify user intents" />
+  <link rel="shortcut icon" href="favicon.png" type="image/png">
+</head>
+
+<body>
+    <div class="container">
+        <img src="../static/background.jpg" width="100%" />
+    </div>
+</body>
+
+<script src="https://web-chat.global.assistant.watson.cloud.ibm.com/loadWatsonAssistantChat.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>
+    var languageSet = false;
+    var languageChoice = 'en'
+
+  /**
+  Iterates through the JSON responses returned by Watson Assistant and 
+  calls the pre-recieve function to translate it back to the user's language 
+  **/
+  const preRecieveHandler = (obj) => {
+    return new Promise(async(resolve, reject) => {
+     if(obj && obj.data.output){
+       let waResponses = obj.data.output.generic;
+        for(let i=0; i<waResponses.length; i++){
+          await prereceive(waResponses[i]);
+        }
+       resolve();
+     } else {
+      reject();
+     }
+    });
+  }
+
+  function prereceive(obj) {
+    /** The pre-recieve function collects the text from the different response types (options, headers, titles, etc.) 
+    and puts them into the "itemsToTranslate" array. It calls backend.py to translate the responses, and the response from backend.py
+    is used to replace the English text. A hashmap (translationIndexMap) is used to keep track of the things that were modified.
+    **/
+
+    return new Promise(function (resolve, reject) {
+      let translationIndexMap = []
+      let translationIndex = 0
+      let itemsToTranslate = []
+
+      if(obj.title) {
+        itemsToTranslate.push(obj.title)
+        translationIndexMap.push({"type": "title", "index": translationIndex})
+        translationIndex++;
+      }
+      
+      if(obj.text) {
+        itemsToTranslate.push(obj.text)
+        translationIndexMap.push({"type": "text", "index": translationIndex})
+        translationIndex++;
+      }
+
+      if(obj.header) {
+        itemsToTranslate.push(obj.header)
+        translationIndexMap.push({"type": "header", "index": translationIndex})
+        translationIndex++;
+      }
+
+      // add in options and suggestions here in a second
+      if(obj.options) {
+        obj_copy = Object.assign({}, obj)
+        obj_copy.options.forEach((option, index) => {
+          // console.log(obj_copy.options)
+          itemsToTranslate.push(option.label)
+        })
+
+        let optionsLength = obj.options.length + 1;
+        translationIndexMap.push({type:'options',
+                                  index_start:translationIndex,
+                                  index_end:(translationIndex + optionsLength)})
+        translationIndex = translationIndex + optionsLength;
+        
+    }
+
+      if(obj.suggestions) {
+        obj.suggestions.forEach((option,index)=>{
+          itemsToTranslate.push(obj.suggestions[index].label)
+        })
+        let suggestionsLength = obj.suggestions.length + 1;
+        translationIndexMap.push({type:'suggestions',
+                                  index_start:translationIndex,
+                                  index_end:(translationIndex + suggestionsLength)})
+        translationIndex = translationIndex + suggestionsLength;
+      }
+
+      itemsToTranslate = JSON.stringify({"translation": itemsToTranslate});
+
+      $.ajax({url: `http://127.0.0.1:4000/translate?source=en&target=${languageChoice}&utterances=${itemsToTranslate}`,
+                type: "POST",
+                contentType: "application/json",
+                success: function (translationResults) {
+                let text='',ltText='';
+                translationResults = translationResults.results;
+                translationIndexMap.forEach(map => {
+                  if(map.type == 'title') {
+                    if(obj.title) {
+                      obj.title = translationResults[map.index]
+                    }
+                  }
+
+                  if(map.type == 'text') {
+                    if(obj.text) {
+                      obj.text = translationResults[map.index]
+                    }
+                  }
+
+                  if(map.type == 'header') {
+                    if(obj.header) {
+                      obj.header = translationResults[map.index]
+                    }
+                  }
+
+                  if(map.type == 'options') {
+                    if(obj.options) {
+                      obj.options.forEach((option,index) => {
+                          ltText = ltText + '<li>' + translationResults[(map.index_start + index)] + '</li>';
+                          option.label = translationResults[(map.index_start + index)];
+                        })
+
+                        ltText = ltText + '</ul>'
+                      }
+                    }
+                  
+                  if(map.type == 'suggestions') {
+                    if(obj.suggestions) {
+                      obj.suggestions.forEach((suggestion,index) => {
+                        ltText = ltText + '<li>' + translationResults[(map.index_start+index)] + '</li>';
+                        suggestion.label = translationResults[(map.index_start + index)]
+                      //  console.log(`new suggestion is now `,suggestion)
+                      })
+                      ltText = ltText + '</ul>'
+                    }
+                  }
+                
+                })
+
+                resolve();
+            },
+            error: function (err) {
+                reject(err);
+            }
+        });
+    });
+   }
+
+  
+  function presendHandler(obj) {
+    /** The presendHandler intercepts the message before it reaches WA, and translates it into English.
+    It initially also sets a cookie to store the user's preferred language.
+    */
+
+    var langChosen = obj.data.input.text.toLowerCase()
+    var languageSupported = ["english", "vietnamese", "spanish"] // example list of languages. Change to your liking. MUST ALSO CHANGE IN WA DIALOG
+    var mapping = {"english": "en", "spanish": "es", "vietnamese": "vi"} // change mapping to corresponding language code
+    if(!languageSet && languageSupported.includes(langChosen)) {
+      languageSet = true
+      languageChoice = mapping[langChosen]
+    }
+        return new Promise(function (resolve, reject) {
+          itemsToTranslate = []
+          itemsToTranslate.push(obj.data.input.text)
+          itemsToTranslate = JSON.stringify({"translation": itemsToTranslate})
+
+          $.ajax({url: `http://127.0.0.1:4000/translate?utterances=${itemsToTranslate}&source=${languageChoice}&target=en`,
+                  type: "POST",
+                  contentType: "application/json",
+                  success: function (data) {
+                    if(data && data.results) {
+                      if(!obj.data.history) {
+                        obj.data.history = {};
+                        obj.data.history.label = ""
+                        obj.data.input.text = data['results'][0]
+                      }
+                    }
+                    resolve();
+              }});
+        });
+  }
+
+  window.watsonAssistantChatOptions = {
+      integrationID: "f6beb8c7-11d2-4d5c-848f-de3cc19efa8f", // The ID of this integration.
+      region: "us-south", // The region your integration is hosted in.
+      onLoad: function(instance) { 
+        instance.on({ type: "pre:send", handler: presendHandler});
+        instance.on({ type: "pre:receive", handler: preRecieveHandler})
+        instance.render(); 
+      }
+  };
+  
+  setTimeout(function(){
+    const t=document.createElement('script');
+    t.src="https://web-chat.global.assistant.watson.appdomain.cloud/loadWatsonAssistantChat.js";
+    document.head.appendChild(t);
+  });
+
+</script>
