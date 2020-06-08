@@ -39,7 +39,7 @@ Language Translation with Watson Assistant Integration
 2. On line 172, change the `mapping` variable to the corresponding [language code](https://cloud.ibm.com/docs/language-translator?topic=language-translator-translation-models).
 
 ### Modifications in background.py
-1. Deploy the cloud functions as an [API](https://cloud.ibm.com/docs/openwhisk?topic=openwhisk-apigateway) to your IBM Cloud account.
+1. Deploy the cloud functions as an [API](https://cloud.ibm.com/docs/openwhisk?topic=openwhisk-apigateway) to your IBM Cloud account. The cloud function for translation are in the *cloud_functions* folder.
 2. Change line 56 to the Cloud Function API URL.
 
 ## How to Run
