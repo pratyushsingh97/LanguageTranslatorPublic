@@ -35,10 +35,12 @@ Language Translation with Watson Assistant Integration
 ![Assets/Dialog.png](Assets/Dialog.png)
 
 ### Modifications in templates/homepage.html
-1. On line 171, change the array the **values** of `languageSupported` to the options like shown above. The values in the array must match exactly to the value of the options in Watson Assistant tooling. 
+1. On line 171, change the values of the array `languageSupported` to the values of the options (like above). The values in the array must match exactly to the value of the options in Watson Assistant tooling. 
 2. On line 172, change the `mapping` variable to the corresponding [language code](https://cloud.ibm.com/docs/language-translator?topic=language-translator-translation-models).
 
 ### Modifications in background.py
 1. Deploy the cloud functions as an [API](https://cloud.ibm.com/docs/openwhisk?topic=openwhisk-apigateway) to your IBM Cloud account.
 2. Change line 56 to the Cloud Function API URL.
 
+## How to Run
+1. `python3 backend.py`
