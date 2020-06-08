@@ -196,8 +196,8 @@ This page currently uses the image in the static folder to render a simple backg
   }
 
   window.watsonAssistantChatOptions = {
-      integrationID: "f6beb8c7-11d2-4d5c-848f-de3cc19efa8f", // The ID of this integration.
-      region: "us-south", // The region your integration is hosted in.
+      integrationID: "", // The ID of this integration.
+      region: "", // The region your integration is hosted in.
       onLoad: function(instance) { 
         instance.on({ type: "pre:send", handler: presendHandler});
         instance.on({ type: "pre:receive", handler: preRecieveHandler})
