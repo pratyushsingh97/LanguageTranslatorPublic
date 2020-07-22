@@ -27,6 +27,8 @@ Language Translation with Watson Assistant Integration
 
 ## Modifications
 
+**You can get quickly up & running with the sample skill. Simply import the skill into your workspace, and make the changes in *homepage.html* and *background.py*.**
+
 ### Modifications to the Assistant
 
 1. Create a `Welcome node` to ask the user the preferred language
